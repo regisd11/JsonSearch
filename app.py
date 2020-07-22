@@ -33,7 +33,6 @@ def listify(term):
 
 
 def parse_json(filename, fieldpath, fieldvalue):
-    print(fieldvalue)
     Position_dict = {}
     with open(filename, 'rb') as input_file:
         parser = ijson.parse(input_file)
@@ -41,9 +40,9 @@ def parse_json(filename, fieldpath, fieldvalue):
         try:
             while len(Position_dict) < len(fieldvalue):
                 prefix, event, value = next(parser)
-                if prefix == 'item.id':
+                if prefix == fieldpath:
                     count = count+1
-                    if type(value) is str:
+                    if type(value) is str and fieldpath == 'item.id':
                         cid = int(value)
                     else:
                         cid = value
