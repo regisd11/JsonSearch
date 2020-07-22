@@ -8,6 +8,7 @@ import simplejson as json
 import qtmodern.styles
 import qtmodern.windows
 from win10toast import ToastNotifier
+import re
 
 
 def wrapper_search(idList, scope, filename):
@@ -71,6 +72,7 @@ class SearchWidget(qtw.QWidget):
         super().__init__(*args, **kwargs)
         self.setLayout(qtw.QFormLayout())
         self.term_input = qtw.QLineEdit()
+        self.term_input.setToolTip('ids are without quote does not end with a space and are separated by semi-column ')
         self.submit_button = qtw.QPushButton(
             'Submit',
             clicked=self.on_submit
@@ -195,8 +197,11 @@ class MainWindow(qtw.QMainWindow):
         elif filename == '':
             self.toaster.show_toast("No File", "You must define a JSON source file (file/open)", threaded=True,
                    icon_path='SINEWAVE.ICO', duration=0)
-        else:
+        elif re.match('^((.*)([^ ];))+((.[^ ]*)([^ ;]))$|((.[^ ]*)([^ ;]))$', term):
             self.search(term, scope, filename)
+        else:
+            self.toaster.show_toast("invalid search", "the search entered does not match pattern", threaded=True, 
+                    icon_path='SINEWAVE.ICO', duration=0)
 
 
     def search(self, term, scope, filename):
