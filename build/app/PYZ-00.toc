@@ -1,0 +1,2 @@
+('C:\\Users\\Regis-Ultrabook\\Documents\\Python\\Projects\\JsonSearch\\build\\app\\PYZ-00.pyz',
+ [])
