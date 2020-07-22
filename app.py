@@ -41,7 +41,6 @@ def parse_json(filename, fieldpath, fieldvalue):
         try:
             while len(Position_dict) < len(fieldvalue):
                 prefix, event, value = next(parser)
-                print('prefix={}, event={}, value={}'.format(prefix, event, value))
                 if prefix == 'item.id':
                     count = count+1
                     if type(value) is str:
