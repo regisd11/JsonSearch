@@ -1,0 +1,2 @@
+cd C:\Users\Regis-Ultrabook\Documents\Python\environment\JsonSearchProjectEnv\Scripts
+call activate.bat

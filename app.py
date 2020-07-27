@@ -18,39 +18,41 @@ def wrapper_search(idList, scope, filename):
     else:
         scopetec = 'item.functionalId'
     Contracts = []
+    Contractnotfound = str()
     idDict = parse_json(filename, scopetec, idList)
-    if len(idDict) == 0:
-        return('No contract found')
-    else:
-        for key in idDict:
+    for key in idDict:
+        if idDict[key] == -1:
+            Contractnotfound = Contractnotfound + '{} not found'.format(key) + '\n'
+        else :
             Contracts = Contracts + search_contract(filename, idDict[key])
-        Contracts = json.dumps(Contracts, sort_keys=True, indent=4)
-        return (Contracts)
+    Contracts = json.dumps(Contracts, sort_keys=True, indent=4)
+    Contracts = Contractnotfound + '\n' + Contracts
+    return (Contracts)
 
 
 def listify(term):
-    spliting = term.split(';')
+    if term.find(';') != -1:
+        spliting = term.split(';')
+    else:
+        spliting = [str(term)]
     return(spliting)
 
 
 def parse_json(filename, fieldpath, fieldvalue):
-    Position_dict = {}
+    not_exist_flag = -1
+    Position_dict = dict.fromkeys(fieldvalue,not_exist_flag)
     with open(filename, 'rb') as input_file:
         parser = ijson.parse(input_file)
         count = 0
-        try:
-            while len(Position_dict) < len(fieldvalue):
-                prefix, event, value = next(parser)
-                if prefix == fieldpath:
-                    count = count+1
-                    if type(value) is str and fieldpath == 'item.id':
-                        cid = int(value)
-                    else:
-                        cid = value
-                if prefix == fieldpath and value in fieldvalue:
-                    Position_dict[cid] = count
-        except StopIteration:
-            pass
+        parser = ijson.kvitems(input_file, 'item')
+        contratids = (v for k, v in parser if k == 'id')
+        count=0
+        for contractid in contratids:
+            count = count + 1
+            if contractid in Position_dict:
+                Position_dict[contractid] = count
+            if -1 not in Position_dict.values():
+                break
         return(Position_dict)
 
 
