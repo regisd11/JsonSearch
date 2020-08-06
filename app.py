@@ -21,7 +21,7 @@ class SearchWidget(qtw.QWidget):
         super().__init__(*args, **kwargs)
         self.setLayout(qtw.QFormLayout())
         self.term_input = qtw.QLineEdit()
-        self.term_input.setToolTip('ids are without quote does not end with a space and are separated by semi-column ')
+        self.term_input.setToolTip('ids are without quote does not end with a space and are separated by semi-column')
         self.submit_button = qtw.QPushButton(
             'Submit',
             clicked=self.on_submit
@@ -49,7 +49,7 @@ class SearchWidget(qtw.QWidget):
 
     @qtc.pyqtSlot(int, int)
     def update_message(self, foundNb, totNb):
-        self.message.setText(f'contract found : {foundNb}/{totNb}')
+        self.message.setText(f'Contracts found : {foundNb}/{totNb}')
 
 
 class Worker(qtc.QObject):
@@ -89,6 +89,7 @@ class Worker(qtc.QObject):
         Position_dict = dict.fromkeys(fieldvalue,not_exist_flag)
         totNb = len(Position_dict)
         foundNb = 0
+        self.logMessage.emit(foundNb, totNb)
         with open(filename, 'rb') as input_file:
             parser = ijson.parse(input_file)
             count = 0
