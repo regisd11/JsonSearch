@@ -1,1 +1,1 @@
-pyinstaller --onedir -w --hidden-import ijson --hidden-import qtmodern --hidden-import PyQt.sip --hidden-import win10toast app.py
+pyinstaller --onedir -w --hidden-import ijson --hidden-import qtmodern --hidden-import PyQt.sip --hidden-import win10toast --hidden-import pyqtspinner app.py

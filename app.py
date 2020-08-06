@@ -9,14 +9,15 @@ import qtmodern.styles
 import qtmodern.windows
 from win10toast import ToastNotifier
 import re
+from pyqtspinner.spinner import WaitingSpinner
 
 
 def wrapper_search(idList, scope, filename):
     idList = listify(idList)
     if scope == 'Technical id':
-        scopetec = 'item.id'
+        scopetec = 'id'
     else:
-        scopetec = 'item.functionalId'
+        scopetec = 'functionalId'
     Contracts = []
     Contractnotfound = str()
     idDict = parse_json(filename, scopetec, idList)
@@ -38,14 +39,14 @@ def listify(term):
     return(spliting)
 
 
-def parse_json(filename, fieldpath, fieldvalue):
+def parse_json(filename, field, fieldvalue):
     not_exist_flag = -1
     Position_dict = dict.fromkeys(fieldvalue,not_exist_flag)
     with open(filename, 'rb') as input_file:
         parser = ijson.parse(input_file)
         count = 0
         parser = ijson.kvitems(input_file, 'item')
-        contratids = (v for k, v in parser if k == 'id')
+        contratids = (v for k, v in parser if k == field)
         count=0
         for contractid in contratids:
             count = count + 1
@@ -96,7 +97,6 @@ class SearchWidget(qtw.QWidget):
             self.submitted.emit('error', scope)
 
 
-
 class Worker(qtc.QObject):
     searchedContracts = qtc.pyqtSignal(str)
 
@@ -120,6 +120,11 @@ class MainWindow(qtw.QMainWindow):
         l = qtw.QVBoxLayout(self.main_widget)
         x = qtw.QHBoxLayout()
         self.textedit = qtw.QTextEdit()
+        self.Spinner = WaitingSpinner(self.textedit,True,True,qtc.Qt.ApplicationModal,
+                roundness=70.0, opacity=15.0,
+                fade=70.0, radius=20.0, lines=25,
+                line_length=10.0, line_width=5.0,
+                speed=1.0, color=(0, 0, 0))
         self.file_name = qtw.QLabel('file Selected: ')
         self.file_name_display = qtw.QLabel()
         x.setAlignment(qtc.Qt.AlignLeft)
@@ -201,6 +206,7 @@ class MainWindow(qtw.QMainWindow):
                    icon_path='SINEWAVE.ICO', duration=0)
         elif re.match('^((.*)([^ ];))+((.[^ ]*)([^ ;]))$|((.[^ ]*)([^ ;]))$', term):
             self.search(term, scope, filename)
+            self.Spinner.start()
         else:
             self.toaster.show_toast("invalid search", "the search entered does not match pattern", threaded=True, 
                     icon_path='SINEWAVE.ICO', duration=0)
@@ -218,6 +224,7 @@ class MainWindow(qtw.QMainWindow):
         self.toaster.show_toast("Finished", "Your search has completed", threaded=True,
                    icon_path='SINEWAVE.ICO', duration=0)
         self.statusBar().showMessage('Search completed')
+        self.Spinner.stop()
 
 
 if __name__ == '__main__':
