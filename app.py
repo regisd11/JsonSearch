@@ -12,64 +12,10 @@ import re
 from pyqtspinner.spinner import WaitingSpinner
 
 
-def wrapper_search(idList, scope, filename):
-    idList = listify(idList)
-    if scope == 'Technical id':
-        scopetec = 'id'
-    else:
-        scopetec = 'functionalId'
-    Contracts = []
-    Contractnotfound = str()
-    idDict = parse_json(filename, scopetec, idList)
-    for key in idDict:
-        if idDict[key] == -1:
-            Contractnotfound = Contractnotfound + '{} not found'.format(key) + '\n'
-        else :
-            Contracts = Contracts + search_contract(filename, idDict[key])
-    Contracts = json.dumps(Contracts, sort_keys=True, indent=4)
-    Contracts = Contractnotfound + '\n' + Contracts
-    return (Contracts)
-
-
-def listify(term):
-    if term.find(';') != -1:
-        spliting = term.split(';')
-    else:
-        spliting = [str(term)]
-    return(spliting)
-
-
-def parse_json(filename, field, fieldvalue):
-    not_exist_flag = -1
-    Position_dict = dict.fromkeys(fieldvalue,not_exist_flag)
-    with open(filename, 'rb') as input_file:
-        parser = ijson.parse(input_file)
-        count = 0
-        parser = ijson.kvitems(input_file, 'item')
-        contratids = (v for k, v in parser if k == field)
-        count=0
-        for contractid in contratids:
-            count = count + 1
-            if contractid in Position_dict:
-                Position_dict[contractid] = count
-            if -1 not in Position_dict.values():
-                break
-        return(Position_dict)
-
-
-def search_contract(filename, count):
-    with open(filename, 'rb') as input_file:
-        Contracts = ijson.items(input_file, 'item')
-        if count != -1:
-            Contracts = itertools.islice(Contracts, count -1, count)
-            Contracts = list(Contracts)
-            return(Contracts)
-        else:
-            pass
-
 
 class SearchWidget(qtw.QWidget):
     submitted = qtc.pyqtSignal(str, str)
+    
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -83,10 +29,14 @@ class SearchWidget(qtw.QWidget):
         self.cb = qtw.QComboBox()
         self.cb.addItem("Technical id")
         self.cb.addItem("Functional id")
+        self.message = qtw.QLabel()
+
 
         self.layout().addRow("Scope", self.cb)
         self.layout().addRow('Search', self.term_input)
         self.layout().addRow('', self.submit_button)
+        self.layout().addRow('', self.message)
+
 
     def on_submit(self):
         term = self.term_input.text()
@@ -97,12 +47,79 @@ class SearchWidget(qtw.QWidget):
             self.submitted.emit('error', scope)
 
 
+    @qtc.pyqtSlot(int, int)
+    def update_message(self, foundNb, totNb):
+        self.message.setText(f'contract found : {foundNb}/{totNb}')
+
+
 class Worker(qtc.QObject):
     searchedContracts = qtc.pyqtSignal(str)
+    logMessage = qtc.pyqtSignal(int, int)
+
+
+    def wrapper_search(self, idList, scope, filename):
+        idList = self.listify(idList)
+        if scope == 'Technical id':
+            scopetec = 'id'
+        else:
+            scopetec = 'functionalId'
+        Contracts = []
+        Contractnotfound = str()
+        idDict = self.parse_json(filename, scopetec, idList)
+        for key in idDict:
+            if idDict[key] == -1:
+                Contractnotfound = Contractnotfound + '{} not found'.format(key) + '\n'
+            else :
+                Contracts = Contracts + self.search_contract(filename, idDict[key])
+        Contracts = json.dumps(Contracts, sort_keys=True, indent=4)
+        Contracts = Contractnotfound + '\n' + Contracts
+        return (Contracts)
+
+
+    def listify(self, term):
+        if term.find(';') != -1:
+            spliting = term.split(';')
+        else:
+            spliting = [str(term)]
+        return(spliting)
+
+
+    def parse_json(self, filename, field, fieldvalue):
+        not_exist_flag = -1
+        Position_dict = dict.fromkeys(fieldvalue,not_exist_flag)
+        totNb = len(Position_dict)
+        foundNb = 0
+        with open(filename, 'rb') as input_file:
+            parser = ijson.parse(input_file)
+            count = 0
+            parser = ijson.kvitems(input_file, 'item')
+            contratids = (v for k, v in parser if k == field)
+            count=0
+            for contractid in contratids:
+                count = count + 1
+                if contractid in Position_dict:
+                    Position_dict[contractid] = count
+                    foundNb = foundNb + 1
+                    self.logMessage.emit(foundNb, totNb)
+                if -1 not in Position_dict.values():
+                    break
+            return(Position_dict)
+
+
+    def search_contract(self, filename, count):
+        with open(filename, 'rb') as input_file:
+            Contracts = ijson.items(input_file, 'item')
+            if count != -1:
+                Contracts = itertools.islice(Contracts, count -1, count)
+                Contracts = list(Contracts)
+                return(Contracts)
+            else:
+                pass
+
 
     @qtc.pyqtSlot(str, str, str)
     def worker_search(self, idList, scope, filename):
-        returnedSearch = wrapper_search(idList, scope, filename)
+        returnedSearch = self.wrapper_search(idList, scope, filename)
         self.searchedContracts.emit(returnedSearch)
 
 class MainWindow(qtw.QMainWindow):
@@ -154,7 +171,6 @@ class MainWindow(qtw.QMainWindow):
         )
 
 
-
         self.statusBar().showMessage('Welcome', 5000)
 
         search_dock = qtw.QDockWidget('Search')
@@ -177,6 +193,7 @@ class MainWindow(qtw.QMainWindow):
         self.search_requested.connect(self.worker.worker_search)
         self.worker.moveToThread(self.worker_thread)
         self.worker_thread.start()
+        self.worker.logMessage.connect(search_widget.update_message)
 
 
     def save(self):
