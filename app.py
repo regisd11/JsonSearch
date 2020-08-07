@@ -79,6 +79,7 @@ class Worker(qtc.QObject):
 
     def wrapper_search(self, idList, scope, filename):
         idList = self.listify(idList)
+        idList = list(set(idList))
         nbTot = len(idList)
         extractedNb = 0
         self.logExtract.emit(extractedNb, nbTot)
@@ -111,7 +112,7 @@ class Worker(qtc.QObject):
     def parse_json(self, filename, field, fieldvalue):
         not_exist_flag = -1
         Position_dict = dict.fromkeys(fieldvalue,not_exist_flag)
-        totNb = len(Position_dict)
+        totNb = len(fieldvalue)
         foundNb = 0
         self.logMessage.emit(foundNb, totNb)
         with open(filename, 'rb') as input_file:
@@ -262,9 +263,9 @@ class MainWindow(qtw.QMainWindow):
 
     def display_search(self, text):
         self.textedit.append(text)
-        self.toaster.show_toast("Finished", "Your search has completed", threaded=True,
+        self.toaster.show_toast("Updated", "Your search has been updated with a contract", threaded=True,
                    icon_path='resources/atom.jpg', duration=0)
-        self.statusBar().showMessage('Search completed')
+        self.statusBar().showMessage('updated')
         self.toggle_spinner.emit(False)
 
 
