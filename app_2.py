@@ -10,8 +10,9 @@ import qtmodern.windows
 from win10toast import ToastNotifier
 import re
 from pyqtspinner.spinner import WaitingSpinner
+import os
 
-
+dirname = os.path.dirname(__file__)
 
 class SearchWidget(qtw.QWidget):
     submitted = qtc.pyqtSignal(str, str)
@@ -30,20 +31,12 @@ class SearchWidget(qtw.QWidget):
         self.cb.addItem("Technical id")
         self.cb.addItem("Functional id")
         self.message = qtw.QLabel()
-        self.extractMessage = qtw.QLabel()
-        self.Spinner = WaitingSpinner(self.submit_button,True,True,qtc.Qt.ApplicationModal,
-                roundness=70.0, opacity=15.0,
-                fade=70.0, radius=3.0, lines=25,
-                line_length=10.0, line_width=5.0,
-                speed=1.0, color=(0, 0, 0))
 
 
         self.layout().addRow("Scope", self.cb)
         self.layout().addRow('Search', self.term_input)
         self.layout().addRow('', self.submit_button)
         self.layout().addRow('', self.message)
-        self.layout().addRow('', self.extractMessage)
-
 
 
     def on_submit(self):
@@ -59,45 +52,29 @@ class SearchWidget(qtw.QWidget):
     def update_message(self, foundNb, totNb):
         self.message.setText(f'Contracts found : {foundNb}/{totNb}')
 
-    @qtc.pyqtSlot(int, int)
-    def update_extract(self, foundNb, totNb):
-        self.extractMessage.setText(f'Contracts extracted : {foundNb}/{totNb}')
-
-    @qtc.pyqtSlot(bool)
-    def Toggle_spinner(self, toggle):
-        if toggle is True:
-            self.Spinner.start()
-        else:
-            self.Spinner.stop()
-
 
 class Worker(qtc.QObject):
     searchedContracts = qtc.pyqtSignal(str)
     logMessage = qtc.pyqtSignal(int, int)
-    logExtract = qtc.pyqtSignal(int, int)
 
 
     def wrapper_search(self, idList, scope, filename):
         idList = self.listify(idList)
-        nbTot = len(idList)
-        extractedNb = 0
-        self.logExtract.emit(extractedNb, nbTot)
         if scope == 'Technical id':
             scopetec = 'id'
         else:
             scopetec = 'functionalId'
+        Contracts = []
         Contractnotfound = str()
         idDict = self.parse_json(filename, scopetec, idList)
         for key in idDict:
             if idDict[key] == -1:
-                Contract = '{} not found'.format(key)
+                Contractnotfound = Contractnotfound + '{} not found'.format(key) + '\n'
             else :
-                Contract = self.search_contract(filename, idDict[key])
-                extractedNb = extractedNb + 1
-                self.logExtract.emit(extractedNb, nbTot)
-            Contract = json.dumps(Contract, sort_keys=True, indent=4)
-            Contract = Contract + '\n' 
-            yield (Contract)
+                Contracts = Contracts + self.search_contract(filename, idDict[key])
+        Contracts = json.dumps(Contracts, sort_keys=True, indent=4)
+        Contracts = Contractnotfound + '\n' + Contracts
+        return (Contracts)
 
 
     def listify(self, term):
@@ -145,33 +122,55 @@ class Worker(qtc.QObject):
     @qtc.pyqtSlot(str, str, str)
     def worker_search(self, idList, scope, filename):
         returnedSearch = self.wrapper_search(idList, scope, filename)
-        for c in returnedSearch: 
-            self.searchedContracts.emit(c)
+        self.searchedContracts.emit(returnedSearch)
 
 class MainWindow(qtw.QMainWindow):
 
     search_requested = qtc.pyqtSignal(str, str, str)
-    toggle_spinner = qtc.pyqtSignal(bool)
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Json Search')
+        self.setWindowIcon(qtg.QIcon(os.path.join(dirname, r'resources\atom.ico')))
+
 
         self.main_widget = qtw.QWidget(self)
         self.main_widget.setFocus()
         self.setCentralWidget(self.main_widget)
 
+
         l = qtw.QVBoxLayout(self.main_widget)
         x = qtw.QHBoxLayout()
-        self.textedit = qtw.QTextEdit()
+        #tabs
+        self.tabs = qtw.QTabWidget()
+        self.tabJson = qtw.QWidget() 
+        self.tabTable = qtw.QWidget()
+        self.tabs.addTab(self.tabJson, "Json") 
+        self.tabs.addTab(self.tabTable, "Table")
+        self.tabJson.layout = qtw.QVBoxLayout(self) 
+        self.tabTable.layout = qtw.QVBoxLayout(self) 
 
+        self.textedit = qtw.QTextEdit()
+        self.Spinner = WaitingSpinner(self.tabs,True,True,qtc.Qt.ApplicationModal,
+                roundness=70.0, opacity=15.0,
+                fade=70.0, radius=20.0, lines=25,
+                line_length=10.0, line_width=5.0,
+                speed=1.0, color=(0, 0, 0))
         self.file_name = qtw.QLabel('file Selected: ')
         self.file_name_display = qtw.QLabel()
+
+        #table
+        self.tableWidget = qtw.QTableWidget()
+
         x.setAlignment(qtc.Qt.AlignLeft)
         x.addWidget(self.file_name)
         x.addWidget(self.file_name_display)
         l.addLayout(x)
-        l.addWidget(self.textedit)
+        l.addWidget(self.tabs)
+        self.tabJson.layout.addWidget(self.textedit) 
+        self.tabJson.setLayout(self.tabJson.layout)
+        self.tabTable.layout.addWidget(self.tableWidget) 
+        self.tabTable.setLayout(self.tabTable.layout)
 
 
         menu = self.menuBar()
@@ -217,8 +216,6 @@ class MainWindow(qtw.QMainWindow):
         self.worker.moveToThread(self.worker_thread)
         self.worker_thread.start()
         self.worker.logMessage.connect(search_widget.update_message)
-        self.worker.logExtract.connect(search_widget.update_extract)
-        self.toggle_spinner.connect(search_widget.Toggle_spinner)
 
 
     def save(self):
@@ -239,20 +236,19 @@ class MainWindow(qtw.QMainWindow):
         filename = self.file_name_display.text()
         if term == 'error' and filename == '':
             self.toaster.show_toast("No Search nor File", "You must define a list of contract to search and a source file (file/open)", threaded=True,
-                   icon_path='SINEWAVE.ICO', duration=0)
+                   icon_path=os.path.join(dirname, r'resources\atom.ico'), duration=0)
         elif term == 'error':
             self.toaster.show_toast("No Search", "You must define a list of contract to search", threaded=True,
-                   icon_path='SINEWAVE.ICO', duration=0)
+                   icon_path=os.path.join(dirname, r'resources\atom.ico'), duration=0)
         elif filename == '':
             self.toaster.show_toast("No File", "You must define a JSON source file (file/open)", threaded=True,
-                   icon_path='SINEWAVE.ICO', duration=0)
+                   icon_path=os.path.join(dirname, r'resources\atom.ico'), duration=0)
         elif re.match('^((.*)([^ ];))+((.[^ ]*)([^ ;]))$|((.[^ ]*)([^ ;]))$', term):
             self.search(term, scope, filename)
-            self.textedit.clear()
-            self.toggle_spinner.emit(True)
+            self.Spinner.start()
         else:
             self.toaster.show_toast("invalid search", "the search entered does not match pattern", threaded=True, 
-                    icon_path='SINEWAVE.ICO', duration=0)
+                    icon_path=os.path.join(dirname, r'resources\atom.ico'), duration=0)
 
 
     def search(self, term, scope, filename):
@@ -261,11 +257,17 @@ class MainWindow(qtw.QMainWindow):
 
 
     def display_search(self, text):
-        self.textedit.append(text)
+        self.textedit.clear()
+        self.textedit.insertPlainText(text)
+        self.textedit.moveCursor(qtg.QTextCursor.Start)
         self.toaster.show_toast("Finished", "Your search has completed", threaded=True,
                    icon_path='resources/atom.jpg', duration=0)
         self.statusBar().showMessage('Search completed')
-        self.toggle_spinner.emit(False)
+        self.Spinner.stop()
+
+    def table_redef(self,text):
+        pass
+
 
 
 

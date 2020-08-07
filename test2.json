@@ -1,0 +1,74 @@
+[
+    {
+        "id": "1546451",
+        "functionalId": "a1",
+        "Contractlines": [{
+            "id": "11",
+            "functionalId": "cl1"
+        }]
+    },
+    {
+        "id": "2564643",
+        "functionalId": "a2",
+        "Contractlines": [{
+            "id": "21",
+            "functionalId": "cl2"
+        }]
+    },
+    {
+        "id": "38746545",
+        "functionalId": "a3",
+        "Contractlines": [{
+            "id": "31",
+            "functionalId": "cl3"
+        }]
+    },
+    {
+        "id": "46465154",
+        "functionalId": "a4",
+        "Contractlines": [{
+            "id": "41",
+            "functionalId": "cl4"
+        }]
+    },
+    {
+        "id": "55578984651",
+        "functionalId": "a5",
+        "Contractlines": [{
+            "id": "51",
+            "functionalId": "cl5"
+        }]
+    },
+    {
+        "id": "6654646511",
+        "functionalId": "a6",
+        "Contractlines": [{
+            "id": "61",
+            "functionalId": "cl6"
+        }]
+    },
+    {
+        "id": "7646463165",
+        "functionalId": "a7",
+        "Contractlines": [{
+            "id": "71",
+            "functionalId": "cl7"
+        }]
+    },
+    {
+        "id": "8879879864654",
+        "functionalId": "a8",
+        "Contractlines": [{
+            "id": "81",
+            "functionalId": "cl8"
+        }]
+    },
+    {
+        "id": "96486465446",
+        "functionalId": "a9",
+        "Contractlines": [{
+            "id": "91",
+            "functionalId": "cl9"
+        }]
+    }
+]
